@@ -1,59 +1,151 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Website Arsip Surat
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi manajemen arsip surat masuk & keluar berbasis web, dibangun dengan Laravel.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Fitur Utama
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Autentikasi user (login / logout)
+- Role user:
+  - **Admin**: bisa upload, edit, hapus surat
+  - **Staf**: hanya melihat data (sesuai aturan yang diatur)
+- Manajemen surat:
+  - Surat **Masuk**
+  - Surat **Keluar**
+- Form upload surat (PDF / Word)
+- Kategori surat (Undangan, Surat Edaran, Laporan, dll)
+- Pencarian & filter surat
+- Dashboard:
+  - Jumlah total surat masuk & keluar
+  - Ringkasan per kategori
+  - Diagram perbandingan (Chart.js):
+    - Surat Masuk vs Surat Keluar
+    - Distribusi per kategori
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Tech Stack
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- **Backend** : Laravel 12, PHP 8.2
+- **Frontend**: Blade, Tailwind CSS, Chart.js
+- **Database**: MySQL / MariaDB (XAMPP)
+- **Tools**   : Composer, NPM, Git
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Cara Menjalankan di Lokal
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Panduan ini untuk Windows dengan XAMPP.
 
-### Premium Partners
+1. Clone Repository
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+di gitbash
+cd c:/xampp/htdocs
+git clone https://github.com/suhastra13/Website-Arsip-Surat.git
+cd Website-Arsip-Surat
 
-## Contributing
+2. Install Dependency
+composer install
+npm install
+npm run build   # atau npm run dev saat pengembangan
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+3. Konfigurasi Environment
+(buat file env kalau belum ada)
+cp .env.example .env
 
-## Code of Conduct
+edit file .env
+APP_NAME="Arsip Surat"
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=arsip_surat
+DB_USERNAME=root
+DB_PASSWORD=
 
-## Security Vulnerabilities
+DB_DATABASE boleh diganti nama lain, nanti harus sama dengan nama database di phpMyAdmin.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+DB_USERNAME dan DB_PASSWORD sesuaikan dengan setting MySQL di komputer masing-masing.
 
-## License
+4. Generate APP_KEY di terminal
+ php artisan key:generate
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+5. Siapkan Database
+
+Buat database baru di phpMyAdmin (misal arsip_surat):
+
+Buka http://localhost/phpmyadmin
+
+Klik Databases
+
+Tambah database dengan nama: arsip_surat
+
+Setelah itu jalankan migrasi:
+
+php artisan migrate
+
+
+Kalau kamu menyediakan file .sql contoh data, pengguna juga bisa:
+
+Import file .sql itu ke database arsip_surat lewat phpMyAdmin
+
+Atau tambahkan perintah di sini: php artisan db:seed jika sudah membuat seeder.
+
+6. Akun Login Default
+
+Jika kamu sudah mengisi tabel users (misalnya manual dari phpMyAdmin), berikan contoh akun:
+
+Email   : admin@arsip.test
+Role    : admin
+Password: (isi dengan password yang kamu pakai)
+
+
+Pengguna lain bisa mengubah atau menambah user langsung dari database.
+
+7. Menjalankan Aplikasi
+php artisan serve
+
+
+Lalu buka di browser:
+
+http://127.0.0.1:8000
+
+Struktur Proyek Singkat
+
+app/Models
+Model Laravel (Surat, Kategori, User, dll)
+
+app/Http/Controllers
+Controller untuk surat, dashboard, dan autentikasi.
+
+resources/views
+Blade view:
+
+layouts/ – layout utama & sidebar
+
+surat/ – halaman surat masuk, surat keluar, upload, detail, dll
+
+dashboard.blade.php – tampilan dashboard & chart
+
+routes/web.php
+Routing halaman web (dashboard, surat, profil, dll).
+
+database/migrations
+Definisi struktur tabel database.
+
+Catatan
+
+File .env tidak di-commit ke Git (berisi konfigurasi & password lokal).
+
+Folder vendor/ dan node_modules/ juga tidak disertakan, karena akan di-install lewat composer install dan npm install.
+
+Untuk menjalankan di komputer lain (misal laptop teman), cukup:
+
+Clone repo dari GitHub
+
+Jalankan langkah 2–7 di atas
