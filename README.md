@@ -36,60 +36,122 @@ Aplikasi manajemen **arsip surat masuk & keluar** berbasis web, dibangun dengan 
 
 ---
 
+Itu tulisannya besar karena GitHub menganggap baris dengan `=== ... ===` sebagai **heading level 1** (judul paling gede).
+Kita ganti jadi heading biasa (`##`, `###`) dan taruh contoh `.env` di dalam code block biar rapi.
+
+Silakan ganti **seluruh bagian “Cara Menjalankan di Lokal”** di README dengan ini:
+
+````markdown
 ## 🚀 Cara Menjalankan di Lokal (Windows + XAMPP)
 
-# === 1. Clone Repository ===
+### 1. Clone Repository
+
+**Buka Git Bash:**
+
+```bash
 cd /c/xampp/htdocs
 git clone https://github.com/suhastra13/Website-Arsip-Surat.git
 cd Website-Arsip-Surat
+````
 
-# === 2. Install Dependency ===
+---
+
+### 2. Install Dependency
+
+```bash
 composer install
 npm install
-# Untuk build sekali:
+# Build sekali:
 npm run build
-# (opsional saat develop, pakai:)
+# (opsional saat pengembangan)
 # npm run dev
+```
 
-# === 3. Siapkan file .env ===
-# Jika .env belum ada, salin dari contoh:
+---
+
+### 3. Konfigurasi Environment (.env)
+
+Jika file `.env` belum ada, salin dulu dari contoh:
+
+```bash
 cp .env.example .env
+```
 
-# Setelah itu EDIT file .env secara manual,
-# isi minimal bagian ini (di editor, bukan lewat terminal):
-# APP_NAME="Arsip Surat"
-# APP_ENV=local
-# APP_KEY=
-# APP_DEBUG=true
-# APP_URL=http://127.0.0.1:8000
-#
-# DB_CONNECTION=mysql
-# DB_HOST=127.0.0.1
-# DB_PORT=3306
-# DB_DATABASE=arsip_surat
-# DB_USERNAME=root
-# DB_PASSWORD=
-#
-# (DB_DATABASE harus sama dengan nama database di phpMyAdmin)
+Lalu buka file `.env` dengan editor (VS Code / Notepad++) dan minimal sesuaikan bagian ini:
 
-# === 4. Generate APP_KEY ===
+```env
+APP_NAME="Arsip Surat"
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=arsip_surat
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+* `DB_DATABASE` harus sama dengan **nama database** yang kamu buat di phpMyAdmin.
+* `DB_USERNAME` dan `DB_PASSWORD` sesuaikan dengan setting MySQL di komputer masing-masing.
+
+---
+
+### 4. Generate APP_KEY
+
+```bash
 php artisan key:generate
+```
 
-# === 5. Siapkan Database ===
-# Buat dahulu database kosong "arsip_surat" di phpMyAdmin:
-#   - Buka http://localhost/phpmyadmin
-#   - Klik "Databases"
-#   - Buat database baru: arsip_surat
+---
 
-# Jalankan migrasi tabel:
+### 5. Siapkan Database
+
+1. Buka phpMyAdmin: [http://localhost/phpmyadmin](http://localhost/phpmyadmin)
+2. Klik **Databases** → buat database baru, misalnya: `arsip_surat`.
+
+Setelah database ada, jalankan migrasi:
+
+```bash
 php artisan migrate
+```
 
-# (Opsional) Kalau punya seeder:
-# php artisan db:seed
+Kalau kamu punya seeder, bisa tambahkan:
 
-# === 6. Jalankan Aplikasi ===
+```bash
+php artisan db:seed
+```
+
+---
+
+### 6. Akun Login Default
+
+Jika tabel `users` sudah diisi (misalnya manual lewat phpMyAdmin), beri contoh akun di README:
+
+* Email   : `admin@arsip.test`
+* Role    : `admin`
+* Password: `password123`
+
+Pengguna lain bisa mengubah / menambah user langsung dari database atau dari fitur manajemen user (kalau sudah ada di aplikasi).
+
+---
+
+### 7. Menjalankan Aplikasi
+
+```bash
 php artisan serve
+```
 
-# Lalu buka di browser:
-# http://127.0.0.1:8000
+Lalu buka di browser:
+
+[http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+```
+
+Kalau bagian lama masih ada teks seperti `=== 4. Generate APP_KEY ===`, hapus saja dan ganti dengan versi di atas.  
+Setelah itu di tab **Preview** GitHub, ukuran tulisannya akan jauh lebih normal dan rapi.
+::contentReference[oaicite:0]{index=0}
+```
 
