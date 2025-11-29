@@ -38,56 +38,58 @@ Aplikasi manajemen **arsip surat masuk & keluar** berbasis web, dibangun dengan 
 
 ## 🚀 Cara Menjalankan di Lokal (Windows + XAMPP)
 
-### 1. Clone Repository
-Buka **Git Bash**:
+# === 1. Clone Repository ===
 cd /c/xampp/htdocs
 git clone https://github.com/suhastra13/Website-Arsip-Surat.git
 cd Website-Arsip-Surat
 
-2. Install Dependency
+# === 2. Install Dependency ===
 composer install
 npm install
-npm run build   # atau "npm run dev" saat pengembangan
+# Untuk build sekali:
+npm run build
+# (opsional saat develop, pakai:)
+# npm run dev
 
-4. Konfigurasi Environment
-Jika file .env belum ada, salin dari contoh:
+# === 3. Siapkan file .env ===
+# Jika .env belum ada, salin dari contoh:
 cp .env.example .env
-Lalu buka .env dan sesuaikan nilai penting:
-APP_NAME="Arsip Surat"
-APP_ENV=local
-APP_KEY=
-APP_DEBUG=true
-APP_URL=http://127.0.0.1:8000
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=arsip_surat
-DB_USERNAME=root
-DB_PASSWORD=
-DB_DATABASE boleh diganti nama lain, wajib sama dengan nama database di phpMyAdmin.
 
-DB_USERNAME & DB_PASSWORD sesuaikan dengan setting MySQL di komputer masing-masing.
+# Setelah itu EDIT file .env secara manual,
+# isi minimal bagian ini (di editor, bukan lewat terminal):
+# APP_NAME="Arsip Surat"
+# APP_ENV=local
+# APP_KEY=
+# APP_DEBUG=true
+# APP_URL=http://127.0.0.1:8000
+#
+# DB_CONNECTION=mysql
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=arsip_surat
+# DB_USERNAME=root
+# DB_PASSWORD=
+#
+# (DB_DATABASE harus sama dengan nama database di phpMyAdmin)
 
-4. Generate APP_KEY
+# === 4. Generate APP_KEY ===
 php artisan key:generate
 
-6. Siapkan Database
-Buka http://localhost/phpmyadmin
-Klik Databases
-Tambah database baru, misalnya dengan nama: arsip_surat
-Setelah database dibuat, jalankan migrasi:
+# === 5. Siapkan Database ===
+# Buat dahulu database kosong "arsip_surat" di phpMyAdmin:
+#   - Buka http://localhost/phpmyadmin
+#   - Klik "Databases"
+#   - Buat database baru: arsip_surat
+
+# Jalankan migrasi tabel:
 php artisan migrate
-Kalau kamu punya file .sql berisi contoh data:
-Import file .sql tersebut ke database arsip_surat lewat phpMyAdmin, atau
-Tambahkan perintah php artisan db:seed di sini jika sudah membuat seeder.
 
-6. Akun Login Default
-Jika tabel users sudah diisi (misalnya manual lewat phpMyAdmin), berikan contoh akun di README:
-Email : admin@arsip.test
-Password: password123
-Pengguna lain bisa mengubah / menambah user langsung dari database atau dari fitur manajemen user (kalau ada di aplikasi).
+# (Opsional) Kalau punya seeder:
+# php artisan db:seed
 
-7. Menjalankan Aplikasi
+# === 6. Jalankan Aplikasi ===
 php artisan serve
-Lalu buka di browser:
-http://127.0.0.1:8000
+
+# Lalu buka di browser:
+# http://127.0.0.1:8000
+
