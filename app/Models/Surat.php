@@ -52,4 +52,10 @@ class Surat extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+
+    public function penerima()
+    {
+        return $this->belongsToMany(User::class, 'surat_user', 'surat_id', 'user_id')
+            ->withTimestamps();
+    }
 }

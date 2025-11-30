@@ -30,8 +30,28 @@
         <div><strong>Ringkasan:</strong> {{ $surat->ringkasan }}</div>
         <div><strong>Penandatangan:</strong> {{ $surat->penandatangan }}</div>
         <div><strong>Tingkat Penting:</strong> {{ ucfirst(str_replace('_', ' ', $surat->tingkat_penting)) }}</div>
-        <div><strong>Dibuat oleh:</strong> {{ $surat->creator->name ?? '-' }}</div>
+        {{-- Penerima Internal --}}
+        <div class="mt-4">
+            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Penerima Internal
+            </dt>
+            <dd class="mt-1 text-sm text-slate-800">
+                @if ($surat->penerima->isEmpty())
+                <span class="text-slate-500">Tidak ada penerima internal yang dipilih.</span>
+                @else
+                <ul class="list-disc list-inside space-y-0.5">
+                    @foreach ($surat->penerima as $u)
+                    <li>
+                        {{ $u->name }}
+                        <span class="text-xs text-slate-500">({{ $u->email }})</span>
+                    </li>
+                    @endforeach
+                </ul>
+                @endif
+            </dd>
+        </div>
 
+        <div><strong>Dibuat oleh:</strong> {{ $surat->creator->name ?? '-' }}</div>
         <div class="pt-2">
             <a href="{{ asset('storage/' . $surat->file_path) }}" target="_blank"
                 class="bg-blue-600 text-white px-4 py-2 rounded inline-block">

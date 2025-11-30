@@ -49,6 +49,10 @@
                     class="block px-4 py-2 {{ request()->routeIs('surat.create') ? 'bg-blue-800' : 'hover:bg-blue-600' }}">
                     Upload Surat
                 </a>
+                <a href="{{ route('admin.users.index') }}"
+                    class="block px-4 py-2 {{ request()->routeIs('admin.users.index') ? 'bg-blue-800' : 'hover:bg-blue-600' }}">
+                    Kelola Pengguna
+                </a>
                 @endif
                 @endauth
             </nav>

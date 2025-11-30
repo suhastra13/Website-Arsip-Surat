@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Surat;
 use App\Models\KategoriSurat;
 use Illuminate\Http\Request;
@@ -10,13 +11,28 @@ use Illuminate\Support\Facades\Storage;
 
 class SuratController extends Controller
 {
-    // LIST SURAT MASUK
+    // ================== LIST SURAT MASUK ==================
     public function indexMasuk(Request $request)
     {
-        $query = Surat::with('kategori')
+        $user = Auth::user();
+
+        $query = Surat::with(['kategori', 'penerima', 'creator'])
             ->where('tipe', 'masuk')
             ->orderByDesc('tanggal_surat');
 
+        // Jika bukan admin, hanya boleh lihat surat yang ia buat
+        // atau yang ditujukan kepadanya (pivot surat_user)
+        if ($user->role !== 'admin') {
+            $userId = $user->id;
+
+            $query->where(function ($q) use ($userId) {
+                $q->where('created_by', $userId)
+                    ->orWhereHas('penerima', function ($qq) use ($userId) {
+                        $qq->where('users.id', $userId);
+                    });
+            });
+        }
+
         if ($request->filled('kategori_id')) {
             $query->where('kategori_id', $request->kategori_id);
         }
@@ -24,25 +40,42 @@ class SuratController extends Controller
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {
-                $sub->where('no_surat', 'like', "%$q%")
-                    ->orWhere('perihal', 'like', "%$q%")
-                    ->orWhere('asal_surat', 'like', "%$q%");
+                $sub->where('no_surat', 'like', "%{$q}%")
+                    ->orWhere('perihal', 'like', "%{$q}%")
+                    ->orWhere('asal_surat', 'like', "%{$q}%");
             });
         }
 
-        $surat = $query->paginate(10)->withQueryString();
+        $surat    = $query->paginate(10)->withQueryString();
         $kategori = KategoriSurat::orderBy('nama')->get();
+        $users    = User::where('role', '!=', 'admin')
+            ->orderBy('name')
+            ->get();
 
-        return view('surat.index-masuk', compact('surat', 'kategori'));
+        return view('surat.index-masuk', compact('surat', 'kategori', 'users'));
     }
 
-    // LIST SURAT KELUAR
+    // ================== LIST SURAT KELUAR ==================
     public function indexKeluar(Request $request)
     {
-        $query = Surat::with('kategori')
+        $user  = Auth::user();
+
+        $query = Surat::with(['kategori', 'penerima', 'creator'])
             ->where('tipe', 'keluar')
             ->orderByDesc('tanggal_surat');
 
+        // Filter akses untuk non-admin
+        if ($user->role !== 'admin') {
+            $userId = $user->id;
+
+            $query->where(function ($q) use ($userId) {
+                $q->where('created_by', $userId)
+                    ->orWhereHas('penerima', function ($qq) use ($userId) {
+                        $qq->where('users.id', $userId);
+                    });
+            });
+        }
+
         if ($request->filled('kategori_id')) {
             $query->where('kategori_id', $request->kategori_id);
         }
@@ -50,26 +83,32 @@ class SuratController extends Controller
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {
-                $sub->where('no_surat', 'like', "%$q%")
-                    ->orWhere('perihal', 'like', "%$q%")
-                    ->orWhere('tujuan_surat', 'like', "%$q%");
+                $sub->where('no_surat', 'like', "%{$q}%")
+                    ->orWhere('perihal', 'like', "%{$q}%")
+                    ->orWhere('tujuan_surat', 'like', "%{$q}%");
             });
         }
 
-        $surat = $query->paginate(10)->withQueryString();
+        $surat    = $query->paginate(10)->withQueryString();
         $kategori = KategoriSurat::orderBy('nama')->get();
+        $users    = User::where('role', '!=', 'admin')
+            ->orderBy('name')
+            ->get();
 
-        return view('surat.index-keluar', compact('surat', 'kategori'));
+        return view('surat.index-keluar', compact('surat', 'kategori', 'users'));
     }
 
-    // FORM UPLOAD
+    // ================== FORM UPLOAD ==================
     public function create()
     {
         $kategori = KategoriSurat::orderBy('nama')->get();
-        return view('surat.create', compact('kategori'));
+        // Hanya user non-admin yang bisa dipilih sebagai penerima
+        $users    = User::where('role', '!=', 'admin')->orderBy('name')->get();
+
+        return view('surat.create', compact('kategori', 'users'));
     }
 
-    // SIMPAN SURAT BARU
+    // ================== SIMPAN SURAT BARU ==================
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -85,10 +124,12 @@ class SuratController extends Controller
             'ringkasan'       => 'nullable|string',
             'penandatangan'   => 'nullable|string|max:255',
             'tingkat_penting' => 'required|in:biasa,penting,sangat_penting',
-            'file'            => 'required|file|mimes:pdf,doc,docx|max:5120', // max ±5MB
+            'file'            => 'required|file|mimes:pdf,doc,docx|max:5120', // ±5MB
+            'user_ids'        => ['required', 'array', 'min:1'],
+            'user_ids.*'      => ['integer', 'exists:users,id'],
         ]);
 
-        // Validasi tambahan: jika tipe masuk, tanggal_terima sebaiknya diisi
+        // Validasi tambahan berdasarkan tipe
         if ($data['tipe'] === 'masuk' && empty($data['tanggal_terima'])) {
             $request->validate([
                 'tanggal_terima' => 'required|date',
@@ -113,41 +154,65 @@ class SuratController extends Controller
             'kode_arsip'      => $kodeArsip,
             'no_surat'        => $data['no_surat'],
             'tanggal_surat'   => $data['tanggal_surat'],
-            'tanggal_terima'  => $data['tipe'] === 'masuk' ? $data['tanggal_terima'] : null,
-            'tanggal_keluar'  => $data['tipe'] === 'keluar' ? $data['tanggal_keluar'] : null,
-            'asal_surat'      => $data['tipe'] === 'masuk' ? $data['asal_surat'] : null,
-            'tujuan_surat'    => $data['tipe'] === 'keluar' ? $data['tujuan_surat'] : null,
+            'tanggal_terima'  => $data['tipe'] === 'masuk'   ? $data['tanggal_terima']  : null,
+            'tanggal_keluar'  => $data['tipe'] === 'keluar'  ? $data['tanggal_keluar']  : null,
+            'asal_surat'      => $data['tipe'] === 'masuk'   ? $data['asal_surat']      : null,
+            'tujuan_surat'    => $data['tipe'] === 'keluar'  ? $data['tujuan_surat']    : null,
             'perihal'         => $data['perihal'],
-            'ringkasan'       => $data['ringkasan'] ?? null,
-            'penandatangan'   => $data['penandatangan'] ?? null,
+            'ringkasan'       => $data['ringkasan']       ?? null,
+            'penandatangan'   => $data['penandatangan']   ?? null,
             'tingkat_penting' => $data['tingkat_penting'],
             'file_path'       => $path,
             'created_by'      => Auth::id(),
             'updated_by'      => null,
         ]);
 
+        // Simpan penerima (pivot)
+        $surat->penerima()->sync($data['user_ids']);
+
         return redirect()
             ->route($surat->tipe === 'masuk' ? 'surat.masuk.index' : 'surat.keluar.index')
             ->with('success', 'Surat berhasil disimpan.');
     }
 
-    // DETAIL SURAT
+    // ================== DETAIL SURAT ==================
     public function show(Surat $surat)
     {
-        $surat->load(['kategori', 'creator', 'updater']);
+        $user = Auth::user();
+
+        // Non-admin hanya boleh lihat surat yang memang dituju ke dia
+        if ($user->role !== 'admin') {
+            $boleh = $surat->penerima()
+                ->where('users.id', $user->id)
+                ->exists();
+
+            if (! $boleh) {
+                abort(403); // Forbidden
+            }
+        }
+
+        $surat->load(['kategori', 'creator', 'updater', 'penerima']);
+
         return view('surat.show', compact('surat'));
     }
 
-    // FORM EDIT
+
+    // ================== FORM EDIT ==================
     public function edit(Surat $surat)
     {
+        $this->checkAccess($surat);
+
         $kategori = KategoriSurat::orderBy('nama')->get();
-        return view('surat.edit', compact('surat', 'kategori'));
+        $users    = User::where('role', '!=', 'admin')->orderBy('name')->get();
+
+        return view('surat.edit', compact('surat', 'kategori', 'users'));
     }
 
-    // UPDATE DATA SURAT
+    // ================== UPDATE DATA SURAT ==================
     public function update(Request $request, Surat $surat)
     {
+        $this->checkAccess($surat);
+
         $data = $request->validate([
             'kategori_id'     => 'required|exists:kategori_surat,id',
             'no_surat'        => 'required|string|max:255',
@@ -161,9 +226,11 @@ class SuratController extends Controller
             'penandatangan'   => 'nullable|string|max:255',
             'tingkat_penting' => 'required|in:biasa,penting,sangat_penting',
             'file'            => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'user_ids'        => ['required', 'array', 'min:1'],
+            'user_ids.*'      => ['integer', 'exists:users,id'],
         ]);
 
-        // Tipe surat tidak diubah dari sini (lebih aman)
+        // Validasi tambahan
         if ($surat->tipe === 'masuk' && empty($data['tanggal_terima'])) {
             $request->validate([
                 'tanggal_terima' => 'required|date',
@@ -176,12 +243,12 @@ class SuratController extends Controller
             ]);
         }
 
-        // Jika ada file baru
+        // File baru?
         if ($request->hasFile('file')) {
-            // hapus file lama
             if ($surat->file_path && Storage::disk('public')->exists($surat->file_path)) {
                 Storage::disk('public')->delete($surat->file_path);
             }
+
             $path = $request->file('file')->store('surat', 'public');
             $surat->file_path = $path;
         }
@@ -189,32 +256,41 @@ class SuratController extends Controller
         $surat->kategori_id     = $data['kategori_id'];
         $surat->no_surat        = $data['no_surat'];
         $surat->tanggal_surat   = $data['tanggal_surat'];
-        $surat->tanggal_terima  = $surat->tipe === 'masuk' ? $data['tanggal_terima'] : null;
+        $surat->tanggal_terima  = $surat->tipe === 'masuk'  ? $data['tanggal_terima'] : null;
         $surat->tanggal_keluar  = $surat->tipe === 'keluar' ? $data['tanggal_keluar'] : null;
-        $surat->asal_surat      = $surat->tipe === 'masuk' ? $data['asal_surat'] : null;
-        $surat->tujuan_surat    = $surat->tipe === 'keluar' ? $data['tujuan_surat'] : null;
+        $surat->asal_surat      = $surat->tipe === 'masuk'  ? $data['asal_surat']     : null;
+        $surat->tujuan_surat    = $surat->tipe === 'keluar' ? $data['tujuan_surat']   : null;
         $surat->perihal         = $data['perihal'];
-        $surat->ringkasan       = $data['ringkasan'] ?? null;
+        $surat->ringkasan       = $data['ringkasan']     ?? null;
         $surat->penandatangan   = $data['penandatangan'] ?? null;
         $surat->tingkat_penting = $data['tingkat_penting'];
         $surat->updated_by      = Auth::id();
 
         $surat->save();
 
+        // Update penerima
+        $surat->penerima()->sync($data['user_ids']);
+
         return redirect()
             ->route($surat->tipe === 'masuk' ? 'surat.masuk.index' : 'surat.keluar.index')
             ->with('success', 'Surat berhasil diperbarui.');
     }
 
-    // HAPUS SURAT
+    // ================== HAPUS SURAT ==================
     public function destroy(Surat $surat)
     {
-        // Hapus file fisik
+        $this->checkAccess($surat);
+
         if ($surat->file_path && Storage::disk('public')->exists($surat->file_path)) {
             Storage::disk('public')->delete($surat->file_path);
         }
 
         $tipe = $surat->tipe;
+
+        // Pivot akan ikut terhapus jika di migration foreign key-nya onDelete('cascade')
+        // kalau mau extra aman, boleh:
+        // $surat->penerima()->detach();
+
         $surat->delete();
 
         return redirect()
@@ -222,31 +298,42 @@ class SuratController extends Controller
             ->with('success', 'Surat berhasil dihapus.');
     }
 
-    // ====== HELPER: GENERATE KODE ARSIP ======
+    // ================== HELPER: CEK AKSES SURAT ==================
+    protected function checkAccess(Surat $surat): void
+    {
+        $user = Auth::user();
+
+        // Admin bebas akses
+        if ($user->role === 'admin') {
+            return;
+        }
+
+        $userId  = $user->id;
+        $allowed = $surat->created_by == $userId
+            || $surat->penerima()->where('users.id', $userId)->exists();
+
+        if (! $allowed) {
+            abort(403, 'Anda tidak berhak mengakses surat ini.');
+        }
+    }
+
+    // ================== HELPER: GENERATE KODE ARSIP ==================
     protected function generateKodeArsip(string $tipe): string
     {
-        // Prefix per tipe
-        $prefix = $tipe === 'masuk' ? 'SM' : 'SK';
-        $tahun  = now()->year;
-
-        // Pola dasar, misal "SM-2025-"
+        $prefix  = $tipe === 'masuk' ? 'SM' : 'SK';
+        $tahun   = now()->year;
         $pattern = $prefix . '-' . $tahun . '-';
 
-        // Ambil kode_arsip terbesar yang cocok dengan prefix + tahun
         $lastKode = Surat::where('kode_arsip', 'like', $pattern . '%')
             ->orderByDesc('kode_arsip')
             ->value('kode_arsip');
 
-        if ($lastKode) {
-            // Potong bagian belakang (nomor 4 digit)
-            $lastNo = (int) substr($lastKode, strlen($pattern));
-        } else {
-            $lastNo = 0;
-        }
+        $lastNo = $lastKode
+            ? (int) substr($lastKode, strlen($pattern))
+            : 0;
 
         $urut = $lastNo + 1;
 
-        // Hasil contoh: SM-2025-0003
         return sprintf('%s-%s-%04d', $prefix, $tahun, $urut);
     }
 }

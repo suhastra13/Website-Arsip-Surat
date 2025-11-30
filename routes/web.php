@@ -5,10 +5,14 @@ use App\Http\Controllers\SuratController;
 use Illuminate\Support\Facades\Route;
 use App\Models\Surat;
 use App\Models\KategoriSurat;
+use App\Http\Controllers\AdminUserController;
+use Illuminate\Support\Facades\Auth;
+
+
 
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 // ========== SEMUA YANG SUDAH LOGIN ==========
@@ -16,23 +20,49 @@ Route::middleware('auth')->group(function () {
 
     // Dashboard
     Route::middleware(['auth'])->group(function () {
+        // Dashboard
         Route::get('/dashboard', function () {
 
-            // Jumlah surat masuk & keluar
-            $totalMasuk  = Surat::where('tipe', 'masuk')->count();
-            $totalKeluar = Surat::where('tipe', 'keluar')->count();
-            $totalSemua  = $totalMasuk + $totalKeluar;
+            $user = Auth::user(); // <-- sekarang pakai facade
 
-            // Ringkasan per kategori
-            $kategoriSummary = KategoriSurat::orderBy('nama')->get();
-            foreach ($kategoriSummary as $k) {
-                // total surat (masuk + keluar) di kategori ini
-                $k->total = Surat::where('kategori_id', $k->id)->count();
+            // ===== Base query tergantung role =====
+            if ($user->role === 'admin') {
+                // Admin lihat semua surat
+                $baseQuery = Surat::query();
+            } else {
+                // Staf hanya surat yang ditujukan ke dia
+                $baseQuery = Surat::whereHas('penerima', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
             }
 
-            // Data untuk chart
+            // ===== Hitung surat masuk / keluar dari baseQuery =====
+            $totalMasuk  = (clone $baseQuery)->where('tipe', 'masuk')->count();
+            $totalKeluar = (clone $baseQuery)->where('tipe', 'keluar')->count();
+            $totalSemua  = $totalMasuk + $totalKeluar;
+
+            // ===== Ringkasan per kategori =====
+            $kategoriSummary = KategoriSurat::orderBy('nama')->get();
+            foreach ($kategoriSummary as $k) {
+                $k->total = (clone $baseQuery)
+                    ->where('kategori_id', $k->id)
+                    ->count();
+            }
+
             $kategoriLabels = $kategoriSummary->pluck('nama');
             $kategoriCounts = $kategoriSummary->pluck('total');
+
+            // ===== Ringkasan per user (khusus admin) =====
+            $userSummary = collect();
+            if ($user->role === 'admin') {
+                $userSummary = \App\Models\User::where('role', '!=', 'admin')
+                    ->orderBy('name')
+                    ->get()
+                    ->map(function ($u) {
+                        $u->total_surat = $u->suratDiterima()->count();
+                        return $u;
+                    });
+            }
 
             return view('dashboard', compact(
                 'totalMasuk',
@@ -40,9 +70,18 @@ Route::middleware('auth')->group(function () {
                 'totalSemua',
                 'kategoriSummary',
                 'kategoriLabels',
-                'kategoriCounts'
+                'kategoriCounts',
+                'userSummary'
             ));
         })->name('dashboard');
+    });
+
+    // ================== MENU ADMIN ==================
+    Route::middleware(['auth', 'admin'])->group(function () {
+        Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+        Route::get('/admin/users/create', [AdminUserController::class, 'create'])->name('admin.users.create');
+        Route::post('/admin/users', [AdminUserController::class, 'store'])->name('admin.users.store');
+        Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy'])->name('admin.users.destroy');
     });
 
 

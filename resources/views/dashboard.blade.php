@@ -95,6 +95,46 @@ $chartKategoriCounts = $kategoriSummary->pluck('total')->values();
         </div>
         @endif
     </div>
+    {{-- Ringkasan per User (hanya admin) --}}
+    @if (Auth::user()->role === 'admin' && isset($userSummary))
+    <div class="mt-8">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm font-semibold text-gray-800">
+                Ringkasan Surat per User
+            </h3>
+            <p class="text-xs text-gray-500">
+                Total surat yang dapat diakses masing-masing user internal.
+            </p>
+        </div>
+
+        @if ($userSummary->isEmpty())
+        <div class="bg-white rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+            Belum ada user staf atau belum ada surat yang dibagikan.
+        </div>
+        @else
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            @foreach ($userSummary as $u)
+            <div class="bg-white rounded-xl border border-slate-100 shadow-sm px-4 py-3 flex flex-col">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    {{ $u->name }}
+                </span>
+                <span class="mt-1 text-[11px] text-slate-500">
+                    {{ $u->email }}
+                </span>
+
+                <span class="mt-3 text-2xl font-bold text-slate-900">
+                    {{ $u->total_surat }}
+                </span>
+                <span class="mt-1 text-xs text-slate-500">
+                    surat dapat diakses
+                </span>
+            </div>
+            @endforeach
+        </div>
+        @endif
+    </div>
+    @endif
+
 
     {{-- CHARTS --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

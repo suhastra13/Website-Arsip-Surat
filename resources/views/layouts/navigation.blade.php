@@ -29,6 +29,9 @@
                     <x-nav-link :href="route('surat.create')" :active="request()->routeIs('surat.create')">
                         {{ __('Upload Surat') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.index')">
+                        {{ __('Kelola User') }}
+                    </x-nav-link>
                     @endif
                     @endauth
                 </div>
@@ -109,6 +112,9 @@
             @if (auth()->user()->role === 'admin')
             <x-responsive-nav-link :href="route('surat.create')" :active="request()->routeIs('surat.create')">
                 {{ __('Upload Surat') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.index')">
+                {{ __('Kelola User') }}
             </x-responsive-nav-link>
             @endif
             @endauth

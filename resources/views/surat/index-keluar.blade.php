@@ -109,7 +109,11 @@ use Illuminate\Support\Facades\Storage;
                             data-ttd="{{ $item->penandatangan }}"
                             data-tingkat="{{ $item->tingkat_penting }}"
                             data-file-url="{{ $fileUrl }}"
-                            data-dibuat="{{ $item->creator->name ?? '-' }}">
+                            data-dibuat="{{ $item->creator->name ?? '-' }}"
+                            data-penerima='@json($item->penerima->map(fn($u) => [
+        "name"  => $u->name,
+        "email" => $u->email,
+    ]))'>
                             Detail
                         </button>
 
@@ -127,7 +131,8 @@ use Illuminate\Support\Facades\Storage;
                             data-perihal="{{ $item->perihal }}"
                             data-ringkasan="{{ $item->ringkasan }}"
                             data-ttd="{{ $item->penandatangan }}"
-                            data-tingkat="{{ $item->tingkat_penting }}">
+                            data-tingkat="{{ $item->tingkat_penting }}"
+                            data-user-ids='@json($item->penerima->pluck("id"))'>
                             Edit
                         </button>
 
@@ -263,6 +268,32 @@ use Illuminate\Support\Facades\Storage;
                         </select>
                     </div>
                 </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">
+                        Penerima Internal
+                    </label>
+
+                    <div class="flex items-center mt-1 mb-1">
+                        <input type="checkbox" id="edit-select-all-users"
+                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <label for="edit-select-all-users" class="ml-2 text-xs text-gray-600">
+                            Pilih semua user
+                        </label>
+                    </div>
+
+                    <select name="user_ids[]" id="edit-user_ids" multiple
+                        class="mt-1 w-full rounded-md border-gray-300 text-sm h-32">
+                        @foreach ($users as $u)
+                        <option value="{{ $u->id }}">
+                            {{ $u->name }} ({{ $u->email }})
+                        </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-[11px] text-gray-500">
+                        Tahan Ctrl/Cmd untuk memilih lebih dari satu.
+                    </p>
+                </div>
+
 
                 <div>
                     <label class="block text-xs font-medium text-gray-700">Ganti File (opsional)</label>
@@ -336,6 +367,26 @@ use Illuminate\Support\Facades\Storage;
                         tingkatColor = 'bg-red-100 text-red-800';
                     }
 
+                    // ===== PENERIMA INTERNAL =====
+                    let penerima = [];
+                    try {
+                        penerima = btn.dataset.penerima ? JSON.parse(btn.dataset.penerima) : [];
+                    } catch (e) {
+                        penerima = [];
+                    }
+
+                    let penerimaHtml = '';
+                    if (!penerima.length) {
+                        penerimaHtml = '<span class="text-slate-500">Tidak ada penerima internal yang dipilih.</span>';
+                    } else {
+                        penerimaHtml = '<ul class="list-disc list-inside space-y-0.5">';
+                        penerima.forEach(u => {
+                            penerimaHtml += `<li>${u.name} <span class="text-xs text-slate-500">(${u.email})</span></li>`;
+                        });
+                        penerimaHtml += '</ul>';
+                    }
+
+
                     detailBody.innerHTML = `
                         <dl class="space-y-2 text-sm text-gray-900">
                             <div>
@@ -386,6 +437,12 @@ use Illuminate\Support\Facades\Storage;
                                     </span>
                                 </dd>
                             </div>
+                             <div>
+                    <dt class="font-semibold text-gray-600">Penerima Internal</dt>
+                    <dd class="mt-0.5">
+                        ${penerimaHtml}
+                    </dd>
+                </div>
                             <div>
                                 <dt class="font-semibold text-gray-600">Dibuat oleh</dt>
                                 <dd>${btn.dataset.dibuat || '-'}</dd>
@@ -402,6 +459,20 @@ use Illuminate\Support\Facades\Storage;
             // ---------- EDIT MODAL ----------
             const modalEdit = document.getElementById('modal-edit');
             const formEdit = document.getElementById('form-edit');
+            // Elemen select penerima & checkbox "pilih semua"
+            const selectUsers = document.getElementById('edit-user_ids');
+            const selectAllUsers = document.getElementById('edit-select-all-users');
+
+            // Event "pilih semua user"
+            if (selectUsers && selectAllUsers) {
+                selectAllUsers.addEventListener('change', () => {
+                    const checked = selectAllUsers.checked;
+                    Array.from(selectUsers.options).forEach(opt => {
+                        opt.selected = checked;
+                    });
+                });
+            }
+
 
             if (modalEdit && formEdit) {
                 document.querySelectorAll('[data-close-edit]').forEach(btn => {
@@ -425,6 +496,27 @@ use Illuminate\Support\Facades\Storage;
                         if (selectKategori) {
                             selectKategori.value = btn.dataset.kategoriId || '';
                         }
+
+                        // ===== SET PENERIMA =====
+                        if (selectUsers) {
+                            let selectedIds = [];
+                            try {
+                                selectedIds = btn.dataset.userIds ? JSON.parse(btn.dataset.userIds) : [];
+                            } catch (e) {
+                                selectedIds = [];
+                            }
+
+                            Array.from(selectUsers.options).forEach(opt => {
+                                opt.selected = selectedIds.includes(parseInt(opt.value));
+                            });
+
+                            if (selectAllUsers) {
+                                const allIds = Array.from(selectUsers.options).map(o => parseInt(o.value));
+                                const allSelected = allIds.length && allIds.every(id => selectedIds.includes(id));
+                                selectAllUsers.checked = allSelected;
+                            }
+                        }
+
 
                         modalEdit.classList.remove('hidden');
                     });

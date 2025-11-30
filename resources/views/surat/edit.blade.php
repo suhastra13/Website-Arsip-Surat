@@ -107,6 +107,54 @@
                                     @endforeach
                                 </select>
                             </div>
+
+                            {{-- PENERIMA SURAT --}}
+                            <div class="mt-6">
+                                <x-input-label for="user_ids" value="Penerima (User yang dapat mengakses surat)" />
+
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Ubah daftar user yang dapat mengakses surat ini.
+                                </p>
+
+                                {{-- Checkbox "Pilih semua" --}}
+                                <div class="mt-3 flex items-center space-x-2">
+                                    <input id="select_all_users" type="checkbox"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
+                                    <label for="select_all_users" class="text-sm text-gray-700">
+                                        Pilih semua user
+                                    </label>
+                                </div>
+
+                                <div
+                                    class="mt-2 max-h-52 overflow-y-auto border border-gray-200 rounded-xl bg-slate-50 px-3 py-3
+               grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+                                    @php
+                                    $selected = old(
+                                    'user_ids',
+                                    isset($surat) ? $surat->penerima->pluck('id')->toArray() : []
+                                    );
+                                    $selected = collect($selected);
+                                    @endphp
+
+                                    @foreach ($users as $user)
+                                    <label class="flex items-center space-x-2 text-sm text-gray-700">
+                                        <input type="checkbox"
+                                            name="user_ids[]"
+                                            value="{{ $user->id }}"
+                                            class="user-checkbox rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+                                            {{ $selected->contains($user->id) ? 'checked' : '' }}>
+                                        <span>
+                                            {{ $user->name }}
+                                            <span class="text-xs text-gray-500">({{ $user->email }})</span>
+                                        </span>
+                                    </label>
+                                    @endforeach
+                                </div>
+
+                                <x-input-error :messages="$errors->get('user_ids')" class="mt-2" />
+                            </div>
+
                         </div>
 
                         <div>
@@ -136,4 +184,27 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('select_all_users');
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+
+            if (!selectAll || checkboxes.length === 0) return;
+
+            // Klik "Pilih semua" -> centang / uncheck semua user
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
+
+            // Kalau semua checkbox dicentang manual, otomatis "Pilih semua" ikut centang
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', function() {
+                    const allChecked = Array.from(checkboxes).every(c => c.checked);
+                    selectAll.checked = allChecked;
+                });
+            });
+        });
+    </script>
+
 </x-app-layout>
