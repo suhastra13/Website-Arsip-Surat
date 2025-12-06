@@ -12,20 +12,22 @@ use Illuminate\Support\Facades\Storage;
 class SuratController extends Controller
 {
     // ================== LIST SURAT MASUK ==================
+
+
     public function indexMasuk(Request $request)
     {
         $user = Auth::user();
 
-        $query = Surat::with(['kategori', 'penerima', 'creator'])
+        // ---- base query: semua surat MASUK yang boleh dia lihat ----
+        $baseQuery = Surat::with(['kategori', 'penerima', 'creator'])
             ->where('tipe', 'masuk')
             ->orderByDesc('tanggal_surat');
 
-        // Jika bukan admin, hanya boleh lihat surat yang ia buat
-        // atau yang ditujukan kepadanya (pivot surat_user)
+        // kalau bukan admin: hanya yang dia buat ATAU yang ditujukan ke dia
         if ($user->role !== 'admin') {
             $userId = $user->id;
 
-            $query->where(function ($q) use ($userId) {
+            $baseQuery->where(function ($q) use ($userId) {
                 $q->where('created_by', $userId)
                     ->orWhereHas('penerima', function ($qq) use ($userId) {
                         $qq->where('users.id', $userId);
@@ -33,27 +35,55 @@ class SuratController extends Controller
             });
         }
 
+        // ---- daftar tahun untuk filter (tanpa filter q/kategori/bulan) ----
+        $tahunQuery = clone $baseQuery;
+        $daftarTahun = $tahunQuery
+            ->whereNotNull('tanggal_surat')
+            ->selectRaw('YEAR(tanggal_surat) as tahun')
+            ->distinct()
+            ->orderByDesc('tahun')
+            ->pluck('tahun');
+
+        // ---- terapkan filter dari form ----
+        $query = clone $baseQuery;
+
+        if ($request->filled('year')) {
+            $query->whereYear('tanggal_surat', $request->year);
+        }
+
+        if ($request->filled('month')) {
+            $query->whereMonth('tanggal_surat', $request->month);
+        }
+
         if ($request->filled('kategori_id')) {
             $query->where('kategori_id', $request->kategori_id);
         }
 
         if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('no_surat', 'like', "%{$q}%")
-                    ->orWhere('perihal', 'like', "%{$q}%")
-                    ->orWhere('asal_surat', 'like', "%{$q}%");
+            $keyword = $request->q;
+            $query->where(function ($sub) use ($keyword) {
+                $sub->where('no_surat', 'like', "%{$keyword}%")
+                    ->orWhere('perihal', 'like', "%{$keyword}%")
+                    ->orWhere('asal_surat', 'like', "%{$keyword}%");
             });
         }
 
-        $surat    = $query->paginate(10)->withQueryString();
+        $surat = $query->paginate(10)->withQueryString();
+
         $kategori = KategoriSurat::orderBy('nama')->get();
-        $users    = User::where('role', '!=', 'admin')
+
+        $users = User::where('role', '!=', 'admin')
             ->orderBy('name')
             ->get();
 
-        return view('surat.index-masuk', compact('surat', 'kategori', 'users'));
+        return view('surat.index-masuk', compact(
+            'surat',
+            'kategori',
+            'users',
+            'daftarTahun'
+        ));
     }
+
 
     // ================== LIST SURAT KELUAR ==================
     public function indexKeluar(Request $request)
@@ -76,6 +106,13 @@ class SuratController extends Controller
             });
         }
 
+        if ($request->filled('year')) {
+            $query->whereYear('tanggal_surat', $request->year);
+        }
+        if ($request->filled('month')) {
+            $query->whereMonth('tanggal_surat', $request->month);
+        }
+
         if ($request->filled('kategori_id')) {
             $query->where('kategori_id', $request->kategori_id);
         }
@@ -95,7 +132,20 @@ class SuratController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('surat.index-keluar', compact('surat', 'kategori', 'users'));
+        $tahunQuery = Surat::where('tipe', 'keluar');
+        if ($user->role !== 'admin') {
+            $tahunQuery->whereHas('penerima', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+        $daftarTahun = $tahunQuery
+            ->whereNotNull('tanggal_surat')
+            ->selectRaw('YEAR(tanggal_surat) as tahun')
+            ->distinct()
+            ->orderByDesc('tahun')
+            ->pluck('tahun');
+
+        return view('surat.index-keluar', compact('surat', 'kategori', 'users', 'daftarTahun'));
     }
 
     // ================== FORM UPLOAD ==================

@@ -1,7 +1,14 @@
 @php
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+
+$bulanList = [
+1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+];
 @endphp
+
 
 <x-app-layout>
     <x-slot name="header">
@@ -29,11 +36,13 @@ use Illuminate\Support\Facades\Storage;
     {{-- FILTER --}}
     <div class="mb-4 bg-blue-600 text-white rounded-lg shadow px-4 py-4">
         <form method="GET" class="flex flex-wrap gap-2 items-center">
+            {{-- Pencarian bebas --}}
             <input type="text" name="q"
                 placeholder="Cari no surat / perihal / asal"
                 value="{{ request('q') }}"
                 class="flex-1 min-w-[200px] rounded-md border-0 px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-300">
 
+            {{-- Filter kategori --}}
             <select name="kategori_id"
                 class="rounded-md border-0 px-3 py-2 text-sm text-gray-900">
                 <option value="">Semua Kategori</option>
@@ -44,12 +53,36 @@ use Illuminate\Support\Facades\Storage;
                 @endforeach
             </select>
 
+            {{-- Filter tahun --}}
+            <select name="year"
+                class="rounded-md border-0 px-3 py-2 text-sm text-gray-900">
+                <option value="">Semua Tahun</option>
+                @foreach ($daftarTahun as $th)
+                <option value="{{ $th }}" {{ request('year') == $th ? 'selected' : '' }}>
+                    {{ $th }}
+                </option>
+                @endforeach
+            </select>
+
+            {{-- Filter bulan --}}
+            <select name="month"
+                class="rounded-md border-0 px-3 py-2 text-sm text-gray-900">
+                <option value="">Semua Bulan</option>
+                @foreach ($bulanList as $num => $label)
+                <option value="{{ $num }}" {{ (int) request('month') === $num ? 'selected' : '' }}>
+                    {{ $label }}
+                </option>
+                @endforeach
+            </select>
+
+            {{-- Tombol --}}
             <button
                 class="inline-flex items-center px-3 py-2 rounded-md bg-white text-blue-700 hover:bg-blue-50 text-sm font-semibold border border-blue-100">
                 Filter
             </button>
         </form>
     </div>
+
 
     {{-- TABEL SURAT MASUK --}}
     <div class="overflow-x-auto">

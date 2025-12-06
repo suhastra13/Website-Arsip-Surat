@@ -21,10 +21,11 @@
         {{-- SIDEBAR BIRU --}}
         <aside class="w-64 bg-blue-700 text-white flex flex-col">
             <div class="h-16 flex items-center px-4 border-b border-blue-500">
-                <span class="font-semibold text-lg">
-                    Arsip Surat
-                </span>
+                <a href="{{ route('dashboard') }}" class="flex items-center">
+                    <x-application-logo />
+                </a>
             </div>
+
 
             {{-- MENU --}}
             <nav class="flex-1 py-4 space-y-1 text-sm font-medium">
